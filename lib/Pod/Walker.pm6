@@ -7,55 +7,64 @@ role Pod::Walker {
     has Callable $!post;
 
     multi method do(Nil) { }
-    multi method do(Pod::Block::Named $node) { $node; }
-    multi method do(Pod::Block::Declarator $node) { $node; }
-    multi method do(Pod::Block::Code $node) { $node; }
-    multi method do(Pod::Block::Comment $node) { $node; }
-    multi method do(Pod::Block::Table $node) { $node; }
-    multi method do(Pod::Config $node) {  $node; }
-    multi method do(Pod::Heading $node) { $node;}
-    multi method do(Pod::List $node) { $node; }
-    multi method do(Pod::Item $node) { $node; }
+    # multi method do(Pod::Block::Named $node) { say $node.config; $node; }
+    # multi method do(Pod::Block::Declarator $node) { $node; }
+    # multi method do(Pod::Block::Code $node) { $node; }
+    # multi method do(Pod::Block::Comment $node) { $node; }
+    # multi method do(Pod::Block::Table $node) { $node; }
+    # multi method do(Pod::Config $node) {  $node; }
+    # multi method do(Pod::Heading $node) { $node;}
+    # multi method do(Pod::List $node) { $node; }
+    # multi method do(Pod::Item $node) { $node; }
     multi method do(Positional $node) { $node.map: { self.visit($_) } }
     multi method do(Str $node) { $node; }
-    multi method do($node) { $node;}
+    multi method do($node) {$node;}
 
-    multi method visit(Nil) {} 
-    multi method visit($node is copy) { 
+    multi method visit(Nil) { Nil;} 
+    multi method visit(Str $node) { $node; }
+    multi method visit(Array $node) { $node.map: {self.visit: $_} }
+    multi method visit($node) { 
         #$node = $!pre($node) if defined $!pre;
         @!stack.push($node);
-        $node = nodeConfig($node);
-        self.do($node);
-        $node.?contents.map: { self.visit: $_};
+        my $n = nodeConfig($node);
+        my $body = $n.contents.map: { self.visit: $_};
         @!stack.pop();
+        $body;
         #$!post($node) if defined $!post;
     }
 }
 
 multi sub walk(Pod::Walker:U $walker, $root) is export { #TODO: %*args;
-    $walker.new().visit: $root;
+    walk $walker.new(), $root;
 }
 
-multi sub walk(Pod::Walker:D $walker, $root) is export {
+multi sub walk(Pod::Walker:D $walker, Pod::Block $root) is export {
     $root.contents ==> map { $walker.visit: $_ };
 }
 
-sub nodeConfig($node) {
+multi sub walk(Pod::Walker:D $walker, Array $root) is export {
+    $root ==> map {$walker.visit: $_};
+}
+
+
+multi sub nodeConfig($node) { $node; }
+multi sub nodeConfig(Pod::Block $node is rw) {
     return $node unless $node.^lookup("config");
     for $node.config.kv -> $key, $value {
         given $key {
-            when "nested" { nested($node, Int($value)); }
-            when "formatted" { formatted($node, $value.split(" ")) }
+            when "nested" { $node = nested($node, Int($value)) }
+            when "formatted" { $node = formatted($node, $value.split(" ")) }
         }
     }
+    $node;
 }
 
-sub nested($node, Int $level) {
-    return $node.contents if $level == 0;
+multi sub nested($node, 0) {$node.contents;}
+multi sub nested($node, Int $level) {
     Pod::Nested.new(contents => [nested($node, $level - 1)]);
 }
 
-multi sub formatted($node, []) { $node }
-multi sub formatted($node, Positional @codes) {
-    formatted( Pod::FormattingCode(contents => $node.contents, type => (pop @codes)), @codes);
+multi sub formatted($node, []) { $node; }
+multi sub formatted($node, @codes) {
+    formatted(Pod::FormattingCode.new(contents => $node.contents, type => (@codes.head)), @codes[1..*-1]);
 }
