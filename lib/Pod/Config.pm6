@@ -1,14 +1,27 @@
 class Pod::Nested is Pod::Block { };
 
-multi sub nodeConfig($node is copy) is export {
+multi sub nodeConfig($node is copy, @state) is export {
     return $node unless $node.^lookup("config");
     for $node.config.kv -> $key, $value {
         given $key {
             when "nested" { $node = nested($node, Int($value)) }
             when "formatted" { $node = formatted($node, $value.split(" ")) }
+            when "numbered" { @state[*-1].contents.unshift(numbered($node)) }
         }
     }
     $node;
+}
+
+sub numbered($node) {
+    state @number = (0,);
+    if @number.elems > $node.level {
+        @number.pop() while @number.elems > $node.level;
+    }
+    else {  
+        @number.push(1) while @number.elems < $node.level:
+    }
+    @number[*-1]++;
+    @number.join('.');
 }
 
 multi sub nested($node, 0) {$node.contents;}

@@ -25,7 +25,7 @@ role Pod::Walker {
     multi method visit(Array $node) { $node.map: {self.visit: $_} }
     multi method visit($node) { 
         @!stack.push($node);
-        my $n = nodeConfig($node);
+        my $n = nodeConfig($node, @!stack);
         my $body = $n.contents.map: { self.visit: $_};
         my $parsed = self.assemble($body);
         @!stack.pop();
