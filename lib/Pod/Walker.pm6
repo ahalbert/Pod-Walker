@@ -3,8 +3,10 @@ class Pod::List is Pod::Block { };
 
 role Pod::Walker {
     has @!stack;
+    has %!config; # Stores %config directives
     has Callable $!pre = { $_ } ;
     has Callable $!post = { $_ };
+    has @!number = (0,); #Stores :numbered state
 
     multi method assemble(Nil) { }
     # multi method assemble(Pod::Block::Named $node) { say $node.config; $node; }
@@ -12,7 +14,6 @@ role Pod::Walker {
     # multi method assemble(Pod::Block::Code $node) { $node; }
     # multi method assemble(Pod::Block::Comment $node) { $node; }
     # multi method assemble(Pod::Block::Table $node) { $node; }
-    # multi method assemble(Pod::Config $node) {  $node; }
     # multi method assemble(Pod::Heading $node) { $node;}
     # multi method assemble(Pod::List $node) { $node; }
     # multi method assemble(Pod::Item $node) { $node; }
@@ -23,13 +24,58 @@ role Pod::Walker {
     multi method visit(Nil) { } 
     multi method visit(Str $node) { $node; }
     multi method visit(Array $node) { $node.map: {self.visit: $_} }
+    multi method visit(Pod::Config $node) {
+        for $node.config.kv -> $k, $v { 
+            %!config{$node.type} = Hash.new() unless %!config{$node.type};
+            %!config{$node.type}{$k} = $v;
+        }
+        $node;
+    }
     multi method visit($node) { 
+        self.applyConfig($node);
         @!stack.push($node);
-        my $n = nodeConfig($node, @!stack);
+        my $n = self.nodeConfig($node);
         my $body = $n.contents.map: { self.visit: $_};
         my $parsed = self.assemble($body);
         @!stack.pop();
         $parsed;
+    }
+
+    #The config methods are stateful methods modifying $node in place. I don't intend to use the return values.
+    method applyConfig($node) {
+        return $node.config unless %!config{getPodType($node)}:exists;
+        self.mergeConfigs($node, %!config{getPodType($node)});
+    }
+    method mergeConfigs($node, %other) {
+        for %other.kv -> $k, $v {
+            if $node.config{$k}:exists {
+                $node.config{$k} = $node.config{$k} ~ $v;
+            }
+            else { $node.config{$k} = $v }
+        }
+        $node.config;
+    }
+    multi method nodeConfig($node is copy) is export {
+        return $node unless $node.^lookup("config");
+        for $node.config.kv -> $key, $value {
+            given $key {
+                when "nested" { $node = nested($node, Int($value)) }
+                when "formatted" { $node = formatted($node, $value.split(" ")) }
+                when "numbered" { @!stack[*-1].contents.unshift(self.numbered($node.level)) }
+            }
+        }
+        $node;
+    }
+
+    method numbered(Int $level) is export {
+        if @!number.elems > $level {
+            @!number.pop() while @!number.elems > $level;
+        }
+        else {  
+            @!number.push(0) while @!number.elems < $level;
+        }
+        @!number[*-1]++;
+        @!number.join('.');
     }
 }
 
