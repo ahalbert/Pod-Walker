@@ -25,6 +25,7 @@ role Pod::Walker {
     multi method visit(Str $node) { $node; }
     multi method visit(Array $node) { $node.map: {self.visit: $_} }
     multi method visit(Pod::Config $node) {
+        %!config{$node.type} = %!config{$node.config{"like"}} if $node.config{"like"}:exists;
         for $node.config.kv -> $k, $v { 
             %!config{$node.type} = Hash.new() unless %!config{$node.type};
             %!config{$node.type}{$k} = $v;
@@ -48,15 +49,13 @@ role Pod::Walker {
     }
     method mergeConfigs($node, %other) {
         for %other.kv -> $k, $v {
-            if $node.config{$k}:exists {
-                $node.config{$k} = $node.config{$k} ~ $v;
-            }
-            else { $node.config{$k} = $v }
+            $node.config{$k} = $v unless $node.config{$k}:exists;
         }
         $node.config;
     }
     multi method nodeConfig($node is copy) is export {
         return $node unless $node.^lookup("config");
+        self.mergeConfigs($node, %!config{$node.config{"like"}}) if $node.config{"like"}:exists;
         for $node.config.kv -> $key, $value {
             given $key {
                 when "nested" { $node = nested($node, Int($value)) }
