@@ -25,7 +25,7 @@ plan 7;
     Bar
 =end para
 
-=begin Foo
+=begin Numberedtest
 =for head1 :numbered
 The Problem
 
@@ -34,15 +34,15 @@ The Solution
 
     =for head2 :numbered
     Analysis
-=end Foo
+=end Numberedtest
 
-=begin Foo2
+=begin Configtest
 =config head1  :formatted<B U>  :numbered
 =config head2  :formatted<I>
 
 =head1 Bar
     =head2 Baz
-=end Foo2
+=end Configtest
 
 
 =begin Liketest
@@ -63,4 +63,3 @@ is walk(Pod::Walker, $=pod[5]).gist, "((1 (The Problem)) (2 (The Solution)) (2.1
 #TODO: unit test :formatted
 is walk(Pod::Walker, $=pod[6]).gist, q[(Pod::Config.new(type => "head1", config => {:formatted("B U"), :numbered("1")}) Pod::Config.new(type => "head2", config => {:formatted("I")}) ((1 (Bar))) ((Baz)))];
 is walk(Pod::Walker, $=pod[7]).gist, q[(Pod::Config.new(type => "head1", config => {:formatted("B U"), :numbered("1")}) Pod::Config.new(type => "head2", config => {:like("head1")}) ((1 1 (Bar))) (1.1 (Baz)) ((1.1.1 (Buzz))))]
-
