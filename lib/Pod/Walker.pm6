@@ -7,8 +7,9 @@ role Pod::Walker {
     has Callable $!pre = { $_ } ;
     has Callable $!post = { $_ };
     has @!number = (0,); #Stores :numbered state
+    has @.bullets = ('-', '*', '>');
 
-    multi method assemble(Nil) { }
+    multi method assemble(Nil, $body) { Nil; }
     # multi method assemble(Pod::Block::Named $node) { say $node.config; $node; }
     # multi method assemble(Pod::Block::Declarator $node) { $node; }
     # multi method assemble(Pod::Block::Code $node) { $node; }
@@ -16,10 +17,11 @@ role Pod::Walker {
     # multi method assemble(Pod::Block::Table $node) { $node; }
     # multi method assemble(Pod::Heading $node) { $node;}
     # multi method assemble(Pod::List $node) { $node; }
-    # multi method assemble(Pod::Item $node) { $node; }
-    multi method assemble(Positional $node) { $node; }
-    multi method assemble(Str $node) { $node; }
-    multi method assemble($node) {$node.WHAT;}
+    multi method assemble(Pod::Item $node, $body is copy) { 
+        my $bullet = @.bullets[($node.level % @.bullets.elems)]; 
+        "($bullet$body)"; 
+    }
+    multi method assemble($node, $body) { "($body)"; }
 
     multi method visit(Nil) { } 
     multi method visit(Str $node) { $node; }
@@ -32,12 +34,13 @@ role Pod::Walker {
         }
         $node;
     }
+
     multi method visit($node) { 
         self.applyConfig($node);
-        @!stack.push($node);
         my $n = self.nodeConfig($node);
-        my $body = $n.contents.map: { self.visit: $_};
-        my $parsed = self.assemble($body);
+        @!stack.push($n);
+        my $parsed = $node.contents.map({ self.visit($_) }).join;
+        $parsed = self.assemble($n, $parsed);
         @!stack.pop();
         $parsed;
     }
