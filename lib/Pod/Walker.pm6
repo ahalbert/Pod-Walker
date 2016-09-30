@@ -1,5 +1,6 @@
 use Pod::Config;
 class Pod::List is Pod::Block { };
+class Pod::NumberedBlock is Pod::Block { };
 
 role Pod::Walker {
     has @!stack;
@@ -9,37 +10,37 @@ role Pod::Walker {
     has @!number = (0,); #Stores :numbered state
     has @.bullets = ('-', '*', '>');
 
-    multi method assemble(Nil, $body) { Nil; }
-    # multi method assemble(Pod::Block::Named $node) { say $node.config; $node; }
+    multi method assemble(Nil, $body) { $body; }
+    # multi method assemble(Pod::Block::Named $node) { $node; }
     # multi method assemble(Pod::Block::Declarator $node) { $node; }
     # multi method assemble(Pod::Block::Code $node) { $node; }
     # multi method assemble(Pod::Block::Comment $node) { $node; }
     # multi method assemble(Pod::Block::Table $node) { $node; }
-    # multi method assemble(Pod::Heading $node) { $node;}
+    # multi method assemble(Pod::Heading $node, $body) { $body; }
     # multi method assemble(Pod::List $node) { $node; }
     multi method assemble(Pod::Item $node, $body is copy) { 
         my $bullet = @.bullets[($node.level % @.bullets.elems)]; 
         "($bullet$body)"; 
     }
-    multi method assemble($node, $body) { "($body)"; }
+    multi method assemble($node, $body) { 
+        return "((" ~ self.numbered($node.level) ~ ")" ~ $body ~ ")" if $node.config{"numbered"}:exists;
+        "($body)"; 
+    }
 
-    multi method visit(Nil) { } 
     multi method visit(Str $node) { $node; }
-    multi method visit(Array $node) { $node.map: {self.visit: $_} }
     multi method visit(Pod::Config $node) {
         %!config{$node.type} = %!config{$node.config{"like"}} if $node.config{"like"}:exists;
         for $node.config.kv -> $k, $v { 
             %!config{$node.type} = Hash.new() unless %!config{$node.type};
             %!config{$node.type}{$k} = $v;
         }
-        $node;
     }
-
+    multi method visit(Array $node)  { $node.map({$_}).join;}
     multi method visit($node) { 
         self.applyConfig($node);
         my $n = self.nodeConfig($node);
         @!stack.push($n);
-        my $parsed = $node.contents.map({ self.visit($_) }).join;
+        my $parsed = $n.contents.map({ self.visit($_) }).join;
         $parsed = self.assemble($n, $parsed);
         @!stack.pop();
         $parsed;
@@ -54,16 +55,18 @@ role Pod::Walker {
         for %other.kv -> $k, $v {
             $node.config{$k} = $v unless $node.config{$k}:exists;
         }
-        $node.config;
     }
     multi method nodeConfig($node is copy) is export {
         return $node unless $node.^lookup("config");
         self.mergeConfigs($node, %!config{$node.config{"like"}}) if $node.config{"like"}:exists;
         for $node.config.kv -> $key, $value {
             given $key {
-                when "nested" { $node = nested($node, Int($value)) }
-                when "formatted" { $node = formatted($node, $value.split(" ")) }
-                when "numbered" { @!stack[*-1].contents.unshift(self.numbered($node.level)) }
+                when "nested" { 
+                    $node = nested($node, Int($value)) unless $value == 0;
+                }
+                when "formatted" { 
+                    $node.contents = [formatted($node, $value.split(" "))];
+                }
             }
         }
         $node;
