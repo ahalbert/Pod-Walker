@@ -19,8 +19,9 @@ role Pod::Walker {
     # multi method assemble(Pod::Heading $node, $body) { $body; }
     # multi method assemble(Pod::List $node) { $node; }
     multi method assemble(Pod::Item $node, $body is copy) { 
+        return "((" ~ self.numbered($node.level) ~ ")" ~ $body ~ ")" if $node.config{"numbered"}:exists;
         my $bullet = @.bullets[($node.level % @.bullets.elems)]; 
-        "($bullet$body)"; 
+        "(($bullet)($body))"; 
     }
     multi method assemble($node, $body) { 
         return "((" ~ self.numbered($node.level) ~ ")" ~ $body ~ ")" if $node.config{"numbered"}:exists;
