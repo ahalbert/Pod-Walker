@@ -1,6 +1,6 @@
 use Test;
 use Pod::Walker;
-plan 2;
+plan 4;
 #0
 =begin ListTest
 =item  Happy
@@ -23,7 +23,7 @@ plan 2;
 =item2     Gas
 =item2     Chocolate
 =end LeveledListTest
-
+#2
 =begin NumberedListTest
 =for item1 :numbered
 Visito
@@ -37,7 +37,21 @@ Vidi
 =for item2 :numbered
 Vici
 =end NumberedListTest
+#3
+=begin ContinuedListTest
+=for item1 :numbered
+Retreat to remote Himalayan monastery
+
+=for item1 :numbered
+Learn the hidden mysteries of space and time
+
+I<????>
+
+=for item1 :numbered :continued
+Prophet!
+=end ContinuedListTest
 
 is walk(Pod::Walker, $=pod[0]), "(((*)((Happy)))((*)((Dopey)))((*)((Sleepy)))((*)((Bashful)))((*)((Sneezy)))((*)((Grumpy)))((*)((Keyser Soze))))";
 is walk(Pod::Walker, $=pod[1]), "(((*)((Animal)))((>)((Vertebrate)))((>)((Invertebrate)))((*)((Phase)))((>)((Solid)))((>)((Liquid)))((>)((Gas)))((>)((Chocolate))))";
 is walk(Pod::Walker, $=pod[2]), "(((1)(Visito))((1.1)(Veni))((1.2)(Vidi))((1.3)(Vici)))";
+is walk(Pod::Walker, $=pod[3]), "(((1)(Retreat to remote Himalayan monastery))((2)(Learn the hidden mysteries of space and time))((????))((3)(Prophet!)))";

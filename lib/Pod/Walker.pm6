@@ -19,7 +19,7 @@ role Pod::Walker {
     # multi method assemble(Pod::Heading $node, $body) { $body; }
     # multi method assemble(Pod::List $node) { $node; }
     multi method assemble(Pod::Item $node, $body is copy) { 
-        return "((" ~ self.numbered($node.level) ~ ")" ~ $body ~ ")" if $node.config{"numbered"}:exists;
+        return "((" ~ self.numbered($node, $node.level) ~ ")" ~ $body ~ ")" if $node.config{"numbered"}:exists;
         my $bullet = @.bullets[($node.level % @.bullets.elems)]; 
         "(($bullet)($body))"; 
     }
@@ -73,7 +73,12 @@ role Pod::Walker {
         $node;
     }
 
-    method numbered(Int $level) is export {
+    multi method numbered($node, Int $level) is export {
+        #Logic for dealing with whether or not the count should be reset
+        state $prevType = Nil;
+        @!number = (0,) if not ($prevType ~~ $node.WHAT) and not ($node.config{'continued'}:exists);
+        $prevType = $node.WHAT;
+        #End reset logic
         if @!number.elems > $level {
             @!number.pop() while @!number.elems > $level;
         }
