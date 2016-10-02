@@ -18,4 +18,3 @@ multi sub formatted($node, @codes) is export {
     return $node.contents unless @codes; #I wanted to implement multi sub for () but it's broken.
     Pod::FormattingCode.new(contents => flat(formatted($node, @codes[1..*-1]),), type => @codes[0]);
 }
-

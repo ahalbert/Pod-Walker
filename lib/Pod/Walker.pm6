@@ -19,6 +19,7 @@ role Pod::Walker {
     # multi method assemble(Pod::Heading $node, $body) { $body; }
     # multi method assemble(Pod::List $node) { $node; }
     multi method assemble(Pod::Item $node, $body is copy) { 
+        #Check if the node contains;
         return "((" ~ self.numbered($node, $node.level) ~ ")" ~ $body ~ ")" if $node.config{"numbered"}:exists;
         my $bullet = @.bullets[($node.level % @.bullets.elems)]; 
         "(($bullet)($body))"; 
@@ -28,7 +29,13 @@ role Pod::Walker {
         "($body)"; 
     }
 
-    multi method visit(Str $node) { $node; }
+    multi method visit(Str $node) { 
+        if $node ~~ /^\h?\#\h?/ {
+            @!stack[*-2].config{'numbered'} = 1;
+            return $node.substr($/.to); 
+        }        
+        $node; 
+    }
     multi method visit(Pod::Config $node) {
         %!config{$node.type} = %!config{$node.config{"like"}} if $node.config{"like"}:exists;
         for $node.config.kv -> $k, $v { 

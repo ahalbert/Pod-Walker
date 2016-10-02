@@ -27,7 +27,7 @@ this = 1 * code(Nil);
 
 =end FormattingBlockTest
 
-is walk(Pod::Walker, $=pod[0]).gist, "(((Foo)) ((Foor)) ((col1 col2)))";
+is walk(Pod::Walker, $=pod[0]), "(((Foo)) ((Foor)) ((col1 col2)))";
 my $FormattingBlockTestExpected = q<(((Bar)) (Lorem ipsum dolor sit amet.) (this = 1 * code(Nil); 
 ) (([test@pod ~]?  (y) )))>;
-is walk(Pod::Walker, $=pod[1]).gist, $FormattingBlockTestExpected;
+is walk(Pod::Walker, $=pod[1]), $FormattingBlockTestExpected;

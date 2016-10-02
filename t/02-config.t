@@ -3,7 +3,7 @@
 #:margin
 use Test;
 use Pod::Walker;
-plan 8;
+plan 9;
 #0
 =begin para :formatted<B>
     Bar
@@ -53,12 +53,25 @@ The Solution
         =for head3 :like<head1> 
         Buzz
 =end Liketest
+#8
+=begin PoundNumberTest
+    =item1 # Liberty
+    =item1 # Death
+    =item1 # Beer
 
-is walk(Pod::Walker, $=pod[0]).gist, "((Bar))";
-is walk(Pod::Walker, $=pod[1]).gist, "(((((Bar)))))";
-is walk(Pod::Walker, $=pod[2]).gist, "((Bar))";
-is walk(Pod::Walker, $=pod[3]).gist, "(((Bar)))";
-is walk(Pod::Walker, $=pod[4]).gist, "((Bar))";
-is walk(Pod::Walker, $=pod[5]).gist, "(((1)(The Problem))((2)(The Solution))((2.1)(Analysis)))";
-is walk(Pod::Walker, $=pod[6]).gist, "(((1)(((Bar))))(((Baz))))";
-is walk(Pod::Walker, $=pod[7]).gist, "(((1)(((((Bar))))))((1.1)(((Baz))))((1.1.1)(((Buzz)))))";
+    The tools are:
+
+    =item1 # Revolution
+    =item1 # Deep-fried peanut butter sandwich
+    =item1 # Keg
+=end PoundNumberTest
+
+is walk(Pod::Walker, $=pod[0]), "((Bar))";
+is walk(Pod::Walker, $=pod[1]), "(((((Bar)))))";
+is walk(Pod::Walker, $=pod[2]), "((Bar))";
+is walk(Pod::Walker, $=pod[3]), "(((Bar)))";
+is walk(Pod::Walker, $=pod[4]), "((Bar))";
+is walk(Pod::Walker, $=pod[5]), "(((1)(The Problem))((2)(The Solution))((2.1)(Analysis)))";
+is walk(Pod::Walker, $=pod[6]), "(((1)(((Bar))))(((Baz))))";
+is walk(Pod::Walker, $=pod[7]), "(((1)(((((Bar))))))((1.1)(((Baz))))((1.1.1)(((Buzz)))))";
+is walk(Pod::Walker, $=pod[8]), "(((1)(Liberty))((2)(Death))((3)(Beer))(The tools are:)((4)(Revolution))((5)(Deep-fried peanut butter sandwich))((6)(Keg)))";
