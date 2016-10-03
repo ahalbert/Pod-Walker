@@ -1,5 +1,5 @@
 use Pod::Config;
-class Pod::List is Pod::Block { };
+class Pod::DefintionList is Pod::Block {};
 class Pod::NumberedBlock is Pod::Block { };
 
 role Pod::Walker {
@@ -11,21 +11,29 @@ role Pod::Walker {
     has @.bullets = ('-', '*', '>');
 
     multi method assemble(Nil, $body) { $body; }
-    # multi method assemble(Pod::Block::Named $node) { $node; }
     # multi method assemble(Pod::Block::Declarator $node) { $node; }
     # multi method assemble(Pod::Block::Code $node) { $node; }
     # multi method assemble(Pod::Block::Comment $node) { $node; }
     # multi method assemble(Pod::Block::Table $node) { $node; }
     # multi method assemble(Pod::Heading $node, $body) { $body; }
     # multi method assemble(Pod::List $node) { $node; }
-    multi method assemble(Pod::Item $node, $body is copy) { 
-        #Check if the node contains;
+    multi method assemble(Pod::Block::Named $node, $body) { 
+        given $node.name {
+            when 'defn' { 
+                my $word = $body.split(' ')[0]; 
+                my $defn = $body.split(' ')[1..*-1]; 
+                return "($word : $defn)";
+            }
+        }
+        "($body)";
+    }
+    multi method assemble(Pod::Item $node, $body) { 
         return "((" ~ self.numbered($node, $node.level) ~ ")" ~ $body ~ ")" if $node.config{"numbered"}:exists;
         my $bullet = @.bullets[($node.level % @.bullets.elems)]; 
         "(($bullet)($body))"; 
     }
     multi method assemble($node, $body) { 
-        return "((" ~ self.numbered($node.level) ~ ")" ~ $body ~ ")" if $node.config{"numbered"}:exists;
+        return "((" ~ self.numbered($node, $node.level) ~ ")" ~ $body ~ ")" if $node.config{"numbered"}:exists;
         "($body)"; 
     }
 
@@ -43,7 +51,6 @@ role Pod::Walker {
             %!config{$node.type}{$k} = $v;
         }
     }
-    multi method visit(Array $node)  { $node.map({$_}).join;}
     multi method visit($node) { 
         self.applyConfig($node);
         my $n = self.nodeConfig($node);
@@ -106,6 +113,6 @@ multi sub walk(Pod::Walker:D $walker, Array $root) is export {
 }
 
 multi sub walk(Pod::Walker:D $walker, Pod::Block $root) is export {
-    $walker.visit: $root ;
+    $walker.visit: $root;
 }
 

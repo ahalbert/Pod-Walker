@@ -66,8 +66,8 @@ The Solution
     =item1 # Keg
 =end PoundNumberTest
 
-is walk(Pod::Walker, $=pod[0]), "((Bar))";
-is walk(Pod::Walker, $=pod[1]), "(((((Bar)))))";
+is walk(Pod::Walker, $=pod[0]), "(((Bar)))";
+is walk(Pod::Walker, $=pod[1]), "((((((Bar))))))";
 is walk(Pod::Walker, $=pod[2]), "((Bar))";
 is walk(Pod::Walker, $=pod[3]), "(((Bar)))";
 is walk(Pod::Walker, $=pod[4]), "((Bar))";
