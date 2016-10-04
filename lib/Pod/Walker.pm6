@@ -11,12 +11,15 @@ role Pod::Walker {
     has @.bullets = ('-', '*', '>');
 
     multi method assemble(Nil, $body) { $body; }
+    multi method assemble(Seq $node, $body) { "({$node.map({ $_.gist; }).join(',')})" }
     # multi method assemble(Pod::Block::Declarator $node) { $node; }
     # multi method assemble(Pod::Block::Code $node) { $node; }
     # multi method assemble(Pod::Block::Comment $node) { $node; }
-    # multi method assemble(Pod::Block::Table $node) { $node; }
     # multi method assemble(Pod::Heading $node, $body) { $body; }
     # multi method assemble(Pod::List $node) { $node; }
+    multi method assemble(Pod::Block::Table $node, $rows) { 
+        "\{" ~ $rows.map({ "[{self.assemble($_, $rows)}]" }).join() ~ "}";
+    }
     multi method assemble(Pod::Block::Named $node, $body) { 
         given $node.name {
             when 'defn' { 
@@ -37,6 +40,11 @@ role Pod::Walker {
         "($body)"; 
     }
 
+    multi method visit(Pod::Block::Table $node) {
+        my $n = self.nodeConfig($node);
+        my $rows = $n.contents.map({ $_.map({ self.visit: $^__ }) });
+        self.assemble($node, $rows);
+    }
     multi method visit(Str $node) { 
         if $node ~~ /^\h?\#\h?/ {
             @!stack[*-2].config{'numbered'} = 1;
@@ -63,7 +71,7 @@ role Pod::Walker {
 
     #The config methods are stateful methods modifying $node in place. I don't intend to use the return values.
     method applyConfig($node) {
-        return $node.config unless %!config{getPodType($node)}:exists;
+        return $node unless %!config{getPodType($node)}:exists;
         self.mergeConfigs($node, %!config{getPodType($node)});
     }
     method mergeConfigs($node, %other) {
