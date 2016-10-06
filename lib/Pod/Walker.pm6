@@ -11,14 +11,18 @@ role Pod::Walker {
     has @.bullets = ('-', '*', '>');
 
     multi method assemble(Nil, $body) { $body; }
-    multi method assemble(Seq $node, $body) { "({$node.map({ $_.gist; }).join(',')})" }
+    multi method assemble(Array $node, $body) {  $node.map({ $_.gist }).join(",") }
     # multi method assemble(Pod::Block::Declarator $node) { $node; }
     # multi method assemble(Pod::Block::Code $node) { $node; }
     # multi method assemble(Pod::Block::Comment $node) { $node; }
     # multi method assemble(Pod::Heading $node, $body) { $body; }
     # multi method assemble(Pod::List $node) { $node; }
     multi method assemble(Pod::Block::Table $node, $rows) { 
-        "\{" ~ $rows.map({ "[{self.assemble($_, $rows)}]" }).join() ~ "}";
+        my List @content = $node.headers ?? 
+            zip_longest($node.headers, $rows, :fillvalue("")) 
+            !! zip_longest((<""> xx $rows.elems), $rows);
+        my Str $caption = $node.caption ?? "({$node.caption})" !! "";
+        "\{" ~ @content.map(-> ($header, $row) { $header ~ " [{ $row.map({ "($_)" }) }] " }) ~ "}$caption";
     }
     multi method assemble(Pod::Block::Named $node, $body) { 
         given $node.name {
@@ -42,8 +46,8 @@ role Pod::Walker {
 
     multi method visit(Pod::Block::Table $node) {
         my $n = self.nodeConfig($node);
-        my $rows = $n.contents.map({ $_.map({ self.visit: $^__ }) });
-        self.assemble($node, $rows);
+        my Array @rows = $n.contents.map({ $_.map({ self.visit: $^__ }).Array }); #For type reasons;
+        self.assemble($n, @rows);
     }
     multi method visit(Str $node) { 
         if $node ~~ /^\h?\#\h?/ {
