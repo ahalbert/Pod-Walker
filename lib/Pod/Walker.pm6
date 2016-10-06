@@ -21,7 +21,8 @@ role Pod::Walker {
         my List @content = $node.headers ?? 
             zip_longest($node.headers, $rows, :fillvalue("")) 
             !! zip_longest((<""> xx $rows.elems), $rows);
-        my Str $caption = $node.caption ?? "({$node.caption})" !! "";
+        my Str $caption = $node.config{'caption'}:exists ?? "({$node.config{'caption'}})" !! "";
+        $caption = $node.caption ?? "({$node.caption})" !! $caption;
         "\{" ~ @content.map(-> ($header, $row) { $header ~ " [{ $row.map({ "($_)" }) }] " }) ~ "}$caption";
     }
     multi method assemble(Pod::Block::Named $node, $body) { 
