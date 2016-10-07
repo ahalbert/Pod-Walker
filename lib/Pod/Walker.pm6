@@ -14,7 +14,7 @@ role Pod::Walker {
     multi method assemble(Array $node, $body) {  $node.map({ $_.gist }).join(",") }
     # multi method assemble(Pod::Block::Declarator $node) { $node; }
     # multi method assemble(Pod::Block::Code $node) { $node; }
-    # multi method assemble(Pod::Block::Comment $node) { $node; }
+    multi method assemble(Pod::Block::Comment $node, $body) { ""; }
     # multi method assemble(Pod::Heading $node, $body) { $body; }
     # multi method assemble(Pod::List $node) { $node; }
     multi method assemble(Pod::Block::Table $node, $rows) { 

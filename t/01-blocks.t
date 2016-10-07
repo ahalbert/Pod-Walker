@@ -3,6 +3,7 @@ use Pod::Walker;
 plan 2;
 
 =begin BlockTest
+=comment commentedout
 =begin foo 
     Foo
 =end foo
