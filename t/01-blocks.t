@@ -15,19 +15,18 @@ Foor
 =end BlockTest
 
 =begin FormattingBlockTest
-=head1 Bar
+=head1 Bar Lorem ipsum dolor sit amet.
 
-Lorem ipsum dolor sit amet.
+say what
 =begin code
 this = 1 * code(Nil);
 =end code
 =begin output
 [test@pod ~]? K<y>
 =end output
-
 =end FormattingBlockTest
 
-is walk(Pod::Walker, $=pod[0]), "(((Foo)) ((Foor)) ((col1 col2)))";
-my $FormattingBlockTestExpected = q<(((Bar)) (Lorem ipsum dolor sit amet.) (this = 1 * code(Nil); 
-) (([test@pod ~]?  (y) )))>;
+is walk(Pod::Walker, $=pod[0]), q'(((Foo))((Foor)){"" [(col1) (col2)] })';
+my $FormattingBlockTestExpected = q<(((Bar Lorem ipsum dolor sit amet.))(say what)(this = 1 * code(Nil);
+)(([test@pod ~]? (y))))>;
 is walk(Pod::Walker, $=pod[1]), $FormattingBlockTestExpected;
