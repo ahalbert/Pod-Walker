@@ -1,5 +1,6 @@
 use Pod::Config;
 class Pod::Block::Named::defn is Pod::Block {};
+class Pod::Block::Named::data  is Pod::Block {};
 class Pod::NumberedBlock is Pod::Block { };
 
 role Pod::Walker {
@@ -25,6 +26,7 @@ role Pod::Walker {
         $caption = $node.caption ?? "({$node.caption})" !! $caption;
         "\{" ~ @content.map(-> ($header, $row) { $header ~ " [{ $row.map({ "($_)" }) }] " }) ~ "}$caption";
     }
+    multi method assemble(Pod::Block::Named::data $node, $body) { ""; }
     multi method assemble(Pod::Block::Named::defn $node, $body) { 
         my $word = $body.split(' ')[0]; 
         my $defn = $body.split(' ')[1..*-1]; 
