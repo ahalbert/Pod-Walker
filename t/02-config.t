@@ -66,12 +66,12 @@ The Solution
     =item1 # Keg
 =end PoundNumberTest
 
-is walk(Pod::Walker, $=pod[0]), "(((Bar)))";
-is walk(Pod::Walker, $=pod[1]), "((((((Bar))))))";
+is walk(Pod::Walker, $=pod[0]), "(B<(Bar)>)";
+is walk(Pod::Walker, $=pod[1]), "(B<I<C<A<(Bar)>>>>)";
 is walk(Pod::Walker, $=pod[2]), "((Bar))";
 is walk(Pod::Walker, $=pod[3]), "(((Bar)))";
 is walk(Pod::Walker, $=pod[4]), "((Bar))";
 is walk(Pod::Walker, $=pod[5]), "(((1)(The Problem))((2)(The Solution))((2.1)(Analysis)))";
-is walk(Pod::Walker, $=pod[6]), "(((1)(((Bar))))(((Baz))))";
-is walk(Pod::Walker, $=pod[7]), "(((1)(((((Bar))))))((1.1)(((Baz))))((1.1.1)(((Buzz)))))";
+is walk(Pod::Walker, $=pod[6]), "(((1)B<U<(Bar)>>)(I<(Baz)>))";
+is walk(Pod::Walker, $=pod[7]), "(((1)B<U<B<U<(Bar)>>>>)((1.1)I<I<(Baz)>>)((1.1.1)B<U<(Buzz)>>))";
 is walk(Pod::Walker, $=pod[8]), "(((1)(Liberty))((2)(Death))((3)(Beer))(The tools are:)((4)(Revolution))((5)(Deep-fried peanut butter sandwich))((6)(Keg)))";

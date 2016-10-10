@@ -28,6 +28,6 @@ this = 1 * code(Nil);
 =end FormattingBlockTest
 
 is walk(Pod::Walker, $=pod[0]), q'(((Foo))((Foor)){"" [(col1) (col2)] })';
-my $FormattingBlockTestExpected = q<(((Bar Lorem ipsum dolor sit amet.))(say what)(this = 1 * code(Nil);
-)(([test@pod ~]? (y))))>;
+my $FormattingBlockTestExpected = q<(((Bar Lorem ipsum dolor sit amet.))(say what)C<this = 1 * code(Nil);
+>(([test@pod ~]? K<y>)))>;
 is walk(Pod::Walker, $=pod[1]), $FormattingBlockTestExpected;
