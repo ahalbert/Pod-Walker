@@ -1,5 +1,5 @@
 use Pod::Config;
-class Pod::DefintionList is Pod::Block {};
+class Pod::Block::Named::defn is Pod::Block {};
 class Pod::NumberedBlock is Pod::Block { };
 
 role Pod::Walker {
@@ -25,12 +25,15 @@ role Pod::Walker {
         $caption = $node.caption ?? "({$node.caption})" !! $caption;
         "\{" ~ @content.map(-> ($header, $row) { $header ~ " [{ $row.map({ "($_)" }) }] " }) ~ "}$caption";
     }
+    multi method assemble(Pod::Block::Named::defn $node, $body) { 
+        my $word = $body.split(' ')[0]; 
+        my $defn = $body.split(' ')[1..*-1]; 
+        return "($word : $defn)";
+    }
     multi method assemble(Pod::Block::Named $node, $body) { 
+        say $node;
         given $node.name {
             when 'defn' { 
-                my $word = $body.split(' ')[0]; 
-                my $defn = $body.split(' ')[1..*-1]; 
-                return "($word : $defn)";
             }
         }
         "($body)";
@@ -45,6 +48,19 @@ role Pod::Walker {
         "($body)"; 
     }
 
+    multi method visit(Pod::Block::Named $node) {
+        my Pod::Block $n;
+        try { 
+            CATCH { 
+                default {
+                    $n = Pod::Block.new(contents => $node.contents, config => $node.config); 
+                }
+            }
+            use MONKEY-SEE-NO-EVAL;
+            $n = EVAL("Pod::Block::Named::{$node.name}.new(contents => \$node.contents, config => \$node.config)");
+         } 
+        self.visit($n);
+    }
     multi method visit(Pod::Block::Table $node) {
         my $n = self.nodeConfig($node);
         my Array @rows = $n.contents.map({ $_.map({ self.visit: $^__ }).Array }); #For type reasons;

@@ -1,6 +1,6 @@
 use Test;
 use Pod::Walker;
-plan 2;
+plan 3;
 #0
 =begin TableTest
 =table

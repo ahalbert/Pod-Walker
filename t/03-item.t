@@ -1,6 +1,6 @@
 use Test;
 use Pod::Walker;
-plan 4;
+plan 5;
 #0
 =begin ListTest
 =item  Happy
