@@ -1,7 +1,10 @@
 use Pod::Config;
 class Pod::Block::Named::defn is Pod::Block {};
+class Pod::Block::Semantic is Pod::Block { has $.name;};
 class Pod::Block::Named::data  is Pod::Block {};
 class Pod::NumberedBlock is Pod::Block { };
+
+my @SemanticBlocks = qw<NAME AUTHOR CREATED EXCLUDES DESCRIPTION INTERFACE SUBROUTINE DIAGNOSTIC WARNING BUG ACKNOWLEDGEMENT DISCLAIMER LICENSE SECTION APPENDIX INDEX SUMMARY SYNOPSIS>;
 
 role Pod::Walker {
     has @!stack;
@@ -27,18 +30,14 @@ role Pod::Walker {
         $caption = $node.caption ?? "({$node.caption})" !! $caption;
         "\{" ~ @content.map(-> ($header, $row) { $header ~ " [{ $row.map({ "($_)" }) }] " }) ~ "}$caption";
     }
+    multi method assemble(Pod::Block::Semantic $node, $body) { "(({$node.name}) ($body))"; }
     multi method assemble(Pod::Block::Named::data $node, $body) { ""; }
     multi method assemble(Pod::Block::Named::defn $node, $body) { 
         my $word = $body.split(' ')[0]; 
         my $defn = $body.split(' ')[1..*-1]; 
-        return "($word : $defn)";
+        "($word : $defn)";
     }
     multi method assemble(Pod::Block::Named $node, $body) { 
-        say $node;
-        given $node.name {
-            when 'defn' { 
-            }
-        }
         "($body)";
     }
     multi method assemble(Pod::Item $node, $body) { 
@@ -59,8 +58,13 @@ role Pod::Walker {
                     $n = Pod::Block.new(contents => $node.contents, config => $node.config); 
                 }
             }
-            use MONKEY-SEE-NO-EVAL;
-            $n = EVAL("Pod::Block::Named::{$node.name}.new(contents => \$node.contents, config => \$node.config)");
+            if $node.name ∈ @SemanticBlocks {
+                $n = Pod::Block::Semantic.new(name => $node.name, config => $node.config, contents => $node.contents);
+            }
+            else {
+                use MONKEY-SEE-NO-EVAL;
+                $n = EVAL("Pod::Block::Named::{$node.name}.new(contents => \$node.contents, config => \$node.config)");
+            }
          } 
         self.visit($n);
     }
@@ -86,10 +90,10 @@ role Pod::Walker {
     multi method visit($node) { 
         self.applyConfig($node);
         my $n = self.nodeConfig($node);
-        @!stack.push($n);
+        @!stack.push: $n;
         my $parsed = $n.contents.map({ self.visit($_) }).join;
         $parsed = self.assemble($n, $parsed);
-        @!stack.pop();
+        @!stack.pop;
         $parsed;
     }
 
