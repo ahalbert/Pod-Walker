@@ -3,6 +3,7 @@ class Pod::Block::Named::defn is Pod::Block {};
 class Pod::Block::Semantic is Pod::Block { has $.name;};
 class Pod::Block::Named::data  is Pod::Block {};
 class Pod::NumberedBlock is Pod::Block { };
+class Pod::Block::Formatted is Pod::Block {has $.type;};
 
 my @SemanticBlocks = qw<NAME AUTHOR CREATED EXCLUDES DESCRIPTION INTERFACE SUBROUTINE DIAGNOSTIC WARNING BUG ACKNOWLEDGEMENT DISCLAIMER LICENSE SECTION APPENDIX INDEX SUMMARY SYNOPSIS>;
 
@@ -19,7 +20,7 @@ role Pod::Walker {
     # multi method assemble(Pod::Block::Declarator $node) { $node; }
     multi method assemble(Pod::Block::Code $node, $body) { "C<$body>"; }
     multi method assemble(Pod::Block::Comment $node, $body) { ""; }
-    multi method assemble(Pod::FormattingCode $node, $body) { "{$node.type}<$body>"; }
+    multi method assemble(Pod::Block::Formatted $node, $body) { "{$node.type}<$body>"; }
     # multi method assemble(Pod::Heading $node, $body) { $body; }
     # multi method assemble(Pod::List $node) { $node; }
     multi method assemble(Pod::Block::Table $node, $rows) { 
@@ -50,7 +51,24 @@ role Pod::Walker {
         "($body)"; 
     }
 
+    multi method visit(Pod::FormattingCode $node) {
+        @!stack.push: $node;
+        my Pod::Block $n;
+        try { 
+            CATCH { 
+                default {
+                    $n = Pod::Block::Formatted.new(contents => $node.contents, config => $node.config, type => $node.type);
+                }
+            }
+            use MONKEY-SEE-NO-EVAL;
+            $n = EVAL("Pod::Block::Formatted::{$node.name}.new(contents => \$node.contents, config => \$node.config)");
+        }
+        my $parsed = self.visit($n);
+        @!stack.pop;
+        $parsed;
+    }
     multi method visit(Pod::Block::Named $node) {
+        @!stack.push($node);
         my Pod::Block $n;
         try { 
             CATCH { 
@@ -66,7 +84,9 @@ role Pod::Walker {
                 $n = EVAL("Pod::Block::Named::{$node.name}.new(contents => \$node.contents, config => \$node.config)");
             }
          } 
-        self.visit($n);
+        my $parsed = self.visit($n);
+        @!stack.pop;
+        $parsed;
     }
     multi method visit(Pod::Block::Table $node) {
         my $n = self.nodeConfig($node);
@@ -107,7 +127,7 @@ role Pod::Walker {
             $node.config{$k} = $v unless $node.config{$k}:exists;
         }
     }
-    multi method nodeConfig($node is copy) is export {
+    multi method nodeConfig($node is copy) {
         return $node unless $node.^lookup("config");
         self.mergeConfigs($node, %!config{$node.config{"like"}}) if $node.config{"like"}:exists;
         for $node.config.kv -> $key, $value {
