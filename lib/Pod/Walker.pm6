@@ -18,8 +18,11 @@ role Pod::Walker {
     multi method assemble(Pod::Block::Code $node, $body) { "C<$body>"; }
     multi method assemble(Pod::Block::Comment $node, $body) { ""; }
     multi method assemble(Pod::FormattingCode $node, $body, $type) { "{$type}<$body>"; }
-    multi method assemble(Pod::FormattingCode $node, $body, "L") { "(({$node.contents // ''})({$node.meta})<$body>)"}
-    multi method assemble(Pod::FormattingCode $node, $body, "P") { "(({$node.meta.IO.slurp.trim})($body))"}
+    multi method assemble(Pod::FormattingCode $node, $body, "L") { "(({$node.meta})<$body>)"}
+    multi method assemble(Pod::FormattingCode $node, $body, "P") { 
+        my $filename =  $node.contents.substr(5); 
+        "({$filename.IO.slurp.trim})";
+    }
     # multi method assemble(Pod::Heading $node, $body) { $body; }
     # multi method assemble(Pod::List $node) { $node; }
     multi method assemble(Pod::Block::Table $node, $rows) { 
