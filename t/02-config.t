@@ -68,8 +68,8 @@ The Solution
 
 is walk(Pod::Walker, $=pod[0]), "(B<(Bar)>)";
 is walk(Pod::Walker, $=pod[1]), "(B<I<C<A<(Bar)>>>>)";
-is walk(Pod::Walker, $=pod[2]), "((Bar))";
-is walk(Pod::Walker, $=pod[3]), "(((Bar)))";
+is walk(Pod::Walker, $=pod[2]), "(((Bar)))";
+is walk(Pod::Walker, $=pod[3]), "((((Bar))))";
 is walk(Pod::Walker, $=pod[4]), "((Bar))";
 is walk(Pod::Walker, $=pod[5]), "(((1)(The Problem))((2)(The Solution))((2.1)(Analysis)))";
 is walk(Pod::Walker, $=pod[6]), "(((1)B<U<(Bar)>>)(I<(Baz)>))";

@@ -1,7 +1,7 @@
 use Test;
 use Pod::Walker;
 plan 3;
-
+#1
 =begin BlockTest
 =comment commentedout
 =begin foo 
@@ -14,7 +14,7 @@ Foor
 =table
   col1  col2
 =end BlockTest
-
+  #2
 =begin FormattingBlockTest
 =head1 Bar Lorem ipsum dolor sit amet.
 

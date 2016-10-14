@@ -1,9 +1,6 @@
 use Pod::Config;
-class Pod::Block::Named::defn is Pod::Block {};
-class Pod::Block::Semantic is Pod::Block { has $.name;};
-class Pod::Block::Named::data  is Pod::Block {};
 class Pod::NumberedBlock is Pod::Block { };
-class Pod::Block::Formatted is Pod::Block {has $.type;};
+class Pod::Block::Named::Semantic is Pod::Block::Named { };
 
 my @SemanticBlocks = qw<NAME AUTHOR CREATED EXCLUDES DESCRIPTION INTERFACE SUBROUTINE DIAGNOSTIC WARNING BUG ACKNOWLEDGEMENT DISCLAIMER LICENSE SECTION APPENDIX INDEX SUMMARY SYNOPSIS>;
 
@@ -20,7 +17,9 @@ role Pod::Walker {
     # multi method assemble(Pod::Block::Declarator $node) { $node; }
     multi method assemble(Pod::Block::Code $node, $body) { "C<$body>"; }
     multi method assemble(Pod::Block::Comment $node, $body) { ""; }
-    multi method assemble(Pod::Block::Formatted $node, $body) { "{$node.type}<$body>"; }
+    multi method assemble(Pod::FormattingCode $node, $body, $type) { "{$type}<$body>"; }
+    multi method assemble(Pod::FormattingCode $node, $body, "L") { "(({$node.contents // ''})({$node.meta})<$body>)"}
+    multi method assemble(Pod::FormattingCode $node, $body, "P") { "(({$node.meta.IO.slurp.trim})($body))"}
     # multi method assemble(Pod::Heading $node, $body) { $body; }
     # multi method assemble(Pod::List $node) { $node; }
     multi method assemble(Pod::Block::Table $node, $rows) { 
@@ -31,9 +30,10 @@ role Pod::Walker {
         $caption = $node.caption ?? "({$node.caption})" !! $caption;
         "\{" ~ @content.map(-> ($header, $row) { $header ~ " [{ $row.map({ "($_)" }) }] " }) ~ "}$caption";
     }
-    multi method assemble(Pod::Block::Semantic $node, $body) { "(({$node.name}) ($body))"; }
-    multi method assemble(Pod::Block::Named::data $node, $body) { ""; }
-    multi method assemble(Pod::Block::Named::defn $node, $body) { 
+    multi method assemble(Pod::Block::Named $node, $body, $name) { "($body)"; }
+    multi method assemble(Pod::Block::Named::Semantic $node, $body, $name) { "(({$node.name}) ($body))"; }
+    multi method assemble(Pod::Block::Named $node, $body, "data") { ""; }
+    multi method assemble(Pod::Block::Named $node, $body, "defn") { 
         my $word = $body.split(' ')[0]; 
         my $defn = $body.split(' ')[1..*-1]; 
         "($word : $defn)";
@@ -52,39 +52,22 @@ role Pod::Walker {
     }
 
     multi method visit(Pod::FormattingCode $node) {
-        @!stack.push: $node;
-        my Pod::Block $n;
-        try { 
-            CATCH { 
-                default {
-                    $n = Pod::Block::Formatted.new(contents => $node.contents, config => $node.config, type => $node.type);
-                }
-            }
-            use MONKEY-SEE-NO-EVAL;
-            $n = EVAL("Pod::Block::Formatted::{$node.name}.new(contents => \$node.contents, config => \$node.config)");
-        }
-        my $parsed = self.visit($n);
+        my $n = self.nodeConfig($node);
+        @!stack.push: $n;
+        my $parsed = $n.contents.map({ self.visit($_) }).join;
+        $parsed = self.assemble($n, $parsed, $n.type);
         @!stack.pop;
         $parsed;
     }
     multi method visit(Pod::Block::Named $node) {
-        @!stack.push($node);
-        my Pod::Block $n;
-        try { 
-            CATCH { 
-                default {
-                    $n = Pod::Block.new(contents => $node.contents, config => $node.config); 
-                }
-            }
-            if $node.name ∈ @SemanticBlocks {
-                $n = Pod::Block::Semantic.new(name => $node.name, config => $node.config, contents => $node.contents);
-            }
-            else {
-                use MONKEY-SEE-NO-EVAL;
-                $n = EVAL("Pod::Block::Named::{$node.name}.new(contents => \$node.contents, config => \$node.config)");
-            }
-         } 
-        my $parsed = self.visit($n);
+        self.applyConfig($node);
+        my $n = self.nodeConfig($node);
+        if $node.name ∈ @SemanticBlocks {
+            $n = Pod::Block::Named::Semantic.new(name => $n.name, config => $n.config, contents => $n.contents);
+        }
+        @!stack.push: $n;
+        my $parsed = $n.contents.map({ self.visit($_) }).join;
+        $parsed = self.assemble($n, $parsed, $n.name);
         @!stack.pop;
         $parsed;
     }
@@ -133,7 +116,7 @@ role Pod::Walker {
         for $node.config.kv -> $key, $value {
             given $key {
                 when "nested" { 
-                    $node = nested($node, Int($value)) unless $value == 0;
+                    $node.contents = nested($node, Int($value)) unless $value <= 0;
                 }
                 when "formatted" { 
                     $node.contents = [formatted($node, $value.split(" "))];

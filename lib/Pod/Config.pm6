@@ -9,7 +9,7 @@ multi sub getPodType($node) is export {
 }
 
 
-multi sub nested($node, 0) is export { $node.contents; }
+multi sub nested($node, 0) is export { $node.contents }
 multi sub nested($node, Int $level) is export {
     Pod::Nested.new(contents => [nested($node, $level - 1)]);
 }
