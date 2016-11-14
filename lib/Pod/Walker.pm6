@@ -7,27 +7,34 @@ my @SemanticBlocks = qw<NAME AUTHOR CREATED EXCLUDES DESCRIPTION INTERFACE SUBRO
 role Pod::Walker {
     has @!stack;
     has %!config; # Stores %config directives
+    has %!aliases; #Stores aliased code
     has Callable $!pre = { $_ } ;
     has Callable $!post = { $_ };
     has @!number = (0,); #Stores :numbered state
     has @.bullets = ('-', '*', '>');
 
     multi method assemble(Nil, $body) { $body; }
-    multi method assemble(Array $node, $body) {  $node.map({ $_.gist }).join(",") }
+    multi method assemble(Array $node, $body) { $node.map({ self.assemble($_, $body); }); }
+    multi method assemble(Str $node, $body) { $node; }
     # multi method assemble(Pod::Block::Declarator $node) { $node; }
     multi method assemble(Pod::Block::Code $node, $body) { "C<$body>"; }
     multi method assemble(Pod::Block::Comment $node, $body) { ""; }
+    multi method assemble(Pod::FormattingCode $node, $body) { self.assemble($node, $body, $node.type); }
     multi method assemble(Pod::FormattingCode $node, $body, $type) { "{$type}<$body>"; }
     multi method assemble(Pod::FormattingCode $node, $body, "L") { "(({$node.meta})<$body>)"}
     multi method assemble(Pod::FormattingCode $node, $body, "P") { 
         my $filename =  $node.contents.substr(5); 
         "({$filename.IO.slurp.trim})";
     }
+    multi method assemble(Pod::FormattingCode $node, $body, "A") { 
+        return "({self.visit(%!aliases{$node.contents[0]})})" if  %!aliases{$node.contents[0]}:exists;
+        "A($body)";
+    }
     # multi method assemble(Pod::Heading $node, $body) { $body; }
     # multi method assemble(Pod::List $node) { $node; }
     multi method assemble(Pod::Block::Table $node, $rows) { 
-        my List @content = $node.headers ?? 
-            zip_longest($node.headers, $rows, :fillvalue("")) 
+        my List @content = $node.headers 
+            ?? zip_longest($node.headers, $rows, :fillvalue("")) 
             !! zip_longest((<""> xx $rows.elems), $rows);
         my Str $caption = $node.config{'caption'}:exists ?? "({$node.config{'caption'}})" !! "";
         $caption = $node.caption ?? "({$node.caption})" !! $caption;
@@ -36,6 +43,7 @@ role Pod::Walker {
     multi method assemble(Pod::Block::Named $node, $body, $name) { "($body)"; }
     multi method assemble(Pod::Block::Named::Semantic $node, $body, $name) { "(({$node.name}) ($body))"; }
     multi method assemble(Pod::Block::Named $node, $body, "data") { ""; }
+    multi method assemble(Pod::Block::Named $node, $body, "alias") { self.addAlias($node); "";}
     multi method assemble(Pod::Block::Named $node, $body, "defn") { 
         my $word = $body.split(' ')[0]; 
         my $defn = $body.split(' ')[1..*-1]; 
@@ -54,14 +62,6 @@ role Pod::Walker {
         "($body)"; 
     }
 
-    multi method visit(Pod::FormattingCode $node) {
-        my $n = self.nodeConfig($node);
-        @!stack.push: $n;
-        my $parsed = $n.contents.map({ self.visit($_) }).join;
-        $parsed = self.assemble($n, $parsed, $n.type);
-        @!stack.pop;
-        $parsed;
-    }
     multi method visit(Pod::Block::Named $node) {
         self.applyConfig($node);
         my $n = self.nodeConfig($node);
@@ -92,6 +92,11 @@ role Pod::Walker {
             %!config{$node.type} = Hash.new() unless %!config{$node.type};
             %!config{$node.type}{$k} = $v;
         }
+    }
+    multi method visit(Array $node) {
+        my @parsed;
+        @parsed.push(self.visit($_)) for $node.List;
+        return @parsed.join;
     }
     multi method visit($node) { 
         self.applyConfig($node);
@@ -128,6 +133,12 @@ role Pod::Walker {
         }
         $node;
     }
+    multi method addAlias($node) {
+        self.visit($node.contents[0]) ~~ /'('(\S+\s+)(.*)')'/; #Match aginst first word as alias name, then take rest as content.
+        %!aliases{$0.trim} = "$1";
+    }
+    multi sub splitAliasedPara(Pod::Block::Para $para) { $para.contents.trim.split(' '); }
+    multi sub splitAliasedPara(Str $para) { $para.trim.split(' '); }
 
     multi method numbered($node, Int $level) is export {
         #Logic for dealing with whether or not the count should be reset
