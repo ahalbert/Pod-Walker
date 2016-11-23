@@ -22,6 +22,7 @@ role Pod::Walker {
     multi method assemble(Pod::FormattingCode $node, $body) { self.assemble($node, $body, $node.type); }
     multi method assemble(Pod::FormattingCode $node, $body, $type) { "{$type}<$body>"; }
     multi method assemble(Pod::FormattingCode $node, $body, "L") { "(({$node.meta})<$body>)"}
+    multi method assemble(Pod::FormattingCode $node, $body, "E") { $node.contents[0];}
     multi method assemble(Pod::FormattingCode $node, $body, "P") { 
         my $filename =  $node.contents.substr(5); 
         "({$filename.IO.slurp.trim})";
