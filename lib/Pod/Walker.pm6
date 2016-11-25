@@ -12,6 +12,7 @@ role Pod::Walker {
     has Callable $!post = { $_ };
     has @!number = (0,); #Stores :numbered state
     has @.bullets = ('-', '*', '>');
+    has %.index;
 
     multi method assemble(Nil, $body) { $body; }
     multi method assemble(Array $node, $body) { $node.map({ self.assemble($_, $body); }); }
@@ -23,6 +24,7 @@ role Pod::Walker {
     multi method assemble(Pod::FormattingCode $node, $body, $type) { "{$type}<$body>"; }
     multi method assemble(Pod::FormattingCode $node, $body, "L") { "(({$node.meta})<$body>)"}
     multi method assemble(Pod::FormattingCode $node, $body, "E") { $node.contents[0];}
+    multi method assemble(Pod::FormattingCode $node, $body, "X") { self.addIndex($node); '';}
     multi method assemble(Pod::FormattingCode $node, $body, "P") { 
         my $filename =  $node.contents.substr(5); 
         "({$filename.IO.slurp.trim})";
@@ -140,6 +142,14 @@ role Pod::Walker {
     }
     multi sub splitAliasedPara(Pod::Block::Para $para) { $para.contents.trim.split(' '); }
     multi sub splitAliasedPara(Str $para) { $para.trim.split(' '); }
+
+    multi method addIndex($node) {
+        if ($node.meta.elems > 1) {
+            %!index{$node.contents[0]} = $node.meta.elems 
+        } else {
+            %!index{$node.contents[0]} = $node.contents;
+        }
+    }
 
     multi method numbered($node, Int $level) is export {
         #Logic for dealing with whether or not the count should be reset

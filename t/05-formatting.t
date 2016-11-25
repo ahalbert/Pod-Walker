@@ -1,6 +1,6 @@
 use Pod::Walker;
 use Test;
-plan 5;
+plan 6;
 #0
 =begin GenericCodeTest
     B<or not B>
@@ -28,9 +28,18 @@ my Str $aliasTestResult = "((The use of A(PME) is subject to the terms and condi
 =begin ECodeTest
 Perl 6 makes considerable use of E<171> and E<187>.
 =end ECodeTest
+#5
+=begin XCodeTest
+    An X<array|arrays> is an ordered list of scalars indexed by number,
+        starting with 0. A X<hash|hashes> is an unordered collection of
+    scalar values indexed by their associated string key.
+
+And X<Pun>
+=end XCodeTest
 
 is walk(Pod::Walker, $=pod[0]), "((B<or not B>))";
 is walk(Pod::Walker, $=pod[1]), "((((http://www.google.com)<MP3>)))";
 is walk(Pod::Walker, $=pod[2]), "(((This is a test of the P formatting code.)))";
 is walk(Pod::Walker, $=pod[3]), $aliasTestResult;
-is walk(Pod::Walker, $=pod[4]), "((Perl 6 makes considerable use of « and ».))"
+is walk(Pod::Walker, $=pod[4]), "((Perl 6 makes considerable use of « and ».))";
+is walk(Pod::Walker, $=pod[5]), "((An  is an ordered list of scalars indexed by number, starting with 0. A  is an unordered collection of scalar values indexed by their associated string key.)(And ))";
